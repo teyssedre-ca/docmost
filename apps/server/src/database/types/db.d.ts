@@ -5,6 +5,8 @@
 
 import type { ColumnType } from "kysely";
 
+export type AuthProviderType = "google" | "oidc" | "saml";
+
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
@@ -42,6 +44,69 @@ export interface Attachments {
   workspaceId: string;
 }
 
+export interface AuthAccounts {
+  authProviderId: string | null;
+  createdAt: Generated<Timestamp>;
+  deletedAt: Timestamp | null;
+  id: Generated<string>;
+  providerUserId: string;
+  updatedAt: Generated<Timestamp>;
+  userId: string;
+  workspaceId: string;
+}
+
+export interface AuthProviders {
+  allowSignup: Generated<boolean>;
+  createdAt: Generated<Timestamp>;
+  creatorId: string | null;
+  deletedAt: Timestamp | null;
+  id: Generated<string>;
+  isEnabled: Generated<boolean>;
+  name: string;
+  oidcClientId: string | null;
+  oidcClientSecret: string | null;
+  oidcIssuer: string | null;
+  samlCertificate: string | null;
+  samlUrl: string | null;
+  type: AuthProviderType;
+  updatedAt: Generated<Timestamp>;
+  workspaceId: string;
+}
+
+export interface Backlinks {
+  createdAt: Generated<Timestamp>;
+  id: Generated<string>;
+  sourcePageId: string;
+  targetPageId: string;
+  updatedAt: Generated<Timestamp>;
+  workspaceId: string;
+}
+
+export interface Billing {
+  amount: Int8 | null;
+  cancelAt: Timestamp | null;
+  cancelAtPeriodEnd: boolean | null;
+  canceledAt: Timestamp | null;
+  createdAt: Generated<Timestamp>;
+  currency: string | null;
+  deletedAt: Timestamp | null;
+  endedAt: Timestamp | null;
+  id: Generated<string>;
+  interval: string | null;
+  metadata: Json | null;
+  periodEndAt: Timestamp | null;
+  periodStartAt: Timestamp;
+  quantity: Int8 | null;
+  status: string;
+  stripeCustomerId: string | null;
+  stripeItemId: string | null;
+  stripePriceId: string | null;
+  stripeProductId: string | null;
+  stripeSubscriptionId: string;
+  updatedAt: Generated<Timestamp>;
+  workspaceId: string;
+}
+
 export interface Comments {
   content: Json | null;
   createdAt: Generated<Timestamp>;
@@ -51,14 +116,34 @@ export interface Comments {
   id: Generated<string>;
   pageId: string;
   parentCommentId: string | null;
+  resolvedAt: Timestamp | null;
   selection: string | null;
   type: string | null;
+  workspaceId: string;
+}
+
+export interface FileTasks {
+  createdAt: Generated<Timestamp>;
+  creatorId: string | null;
+  deletedAt: Timestamp | null;
+  errorMessage: string | null;
+  fileExt: string | null;
+  fileName: string;
+  filePath: string;
+  fileSize: Int8 | null;
+  id: Generated<string>;
+  source: string | null;
+  spaceId: string | null;
+  status: string | null;
+  type: string | null;
+  updatedAt: Generated<Timestamp>;
   workspaceId: string;
 }
 
 export interface Groups {
   createdAt: Generated<Timestamp>;
   creatorId: string | null;
+  deletedAt: Timestamp | null;
   description: string | null;
   id: Generated<string>;
   isDefault: boolean;
@@ -94,6 +179,7 @@ export interface PageHistory {
 
 export interface Pages {
   content: Json | null;
+  contributorIds: Generated<string[] | null>;
   coverPhoto: string | null;
   createdAt: Generated<Timestamp>;
   creatorId: string | null;
@@ -115,9 +201,24 @@ export interface Pages {
   ydoc: Buffer | null;
 }
 
+export interface Shares {
+  createdAt: Generated<Timestamp>;
+  creatorId: string | null;
+  deletedAt: Timestamp | null;
+  id: Generated<string>;
+  includeSubPages: Generated<boolean | null>;
+  key: string;
+  pageId: string | null;
+  searchIndexing: Generated<boolean | null>;
+  spaceId: string;
+  updatedAt: Generated<Timestamp>;
+  workspaceId: string;
+}
+
 export interface SpaceMembers {
   addedById: string | null;
   createdAt: Generated<Timestamp>;
+  deletedAt: Timestamp | null;
   groupId: string | null;
   id: Generated<string>;
   role: string;
@@ -135,7 +236,7 @@ export interface Spaces {
   id: Generated<string>;
   logo: string | null;
   name: string | null;
-  slug: string | null;
+  slug: string;
   updatedAt: Generated<Timestamp>;
   visibility: Generated<string>;
   workspaceId: string;
@@ -155,7 +256,7 @@ export interface Users {
   locale: string | null;
   name: string | null;
   password: string | null;
-  role: string;
+  role: string | null;
   settings: Json | null;
   timezone: string | null;
   updatedAt: Generated<Timestamp>;
@@ -186,28 +287,41 @@ export interface WorkspaceInvitations {
 }
 
 export interface Workspaces {
-  allowedEmailDomains: Generated<string[] | null>;
+  billingEmail: string | null;
   createdAt: Generated<Timestamp>;
   customDomain: string | null;
   defaultRole: Generated<string>;
   defaultSpaceId: string | null;
   deletedAt: Timestamp | null;
   description: string | null;
+  emailDomains: Generated<string[] | null>;
+  enforceSso: Generated<boolean>;
   hostname: string | null;
   id: Generated<string>;
+  licenseKey: string | null;
   logo: string | null;
   name: string | null;
+  plan: string | null;
   settings: Json | null;
+  status: string | null;
+  stripeCustomerId: string | null;
+  trialEndAt: Timestamp | null;
   updatedAt: Generated<Timestamp>;
 }
 
 export interface DB {
   attachments: Attachments;
+  authAccounts: AuthAccounts;
+  authProviders: AuthProviders;
+  backlinks: Backlinks;
+  billing: Billing;
   comments: Comments;
+  fileTasks: FileTasks;
   groups: Groups;
   groupUsers: GroupUsers;
   pageHistory: PageHistory;
   pages: Pages;
+  shares: Shares;
   spaceMembers: SpaceMembers;
   spaces: Spaces;
   users: Users;

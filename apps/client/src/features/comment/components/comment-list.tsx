@@ -6,7 +6,6 @@ import {
   useCommentsQuery,
   useCreateCommentMutation,
 } from "@/features/comment/queries/comment-query";
-
 import CommentEditor from "@/features/comment/components/comment-editor";
 import CommentActions from "@/features/comment/components/comment-actions";
 import { useFocusWithin } from "@mantine/hooks";
@@ -14,8 +13,11 @@ import { IComment } from "@/features/comment/types/comment.types.ts";
 import { usePageQuery } from "@/features/page/queries/page-query.ts";
 import { IPagination } from "@/lib/types.ts";
 import { extractPageSlugId } from "@/lib";
+import { useTranslation } from "react-i18next";
+import { useQueryEmit } from "@/features/websocket/use-query-emit";
 
 function CommentList() {
+  const { t } = useTranslation();
   const { pageSlug } = useParams();
   const { data: page } = usePageQuery({ pageId: extractPageSlugId(pageSlug) });
   const {
@@ -25,6 +27,7 @@ function CommentList() {
   } = useCommentsQuery({ pageId: page?.id, limit: 100 });
   const createCommentMutation = useCreateCommentMutation();
   const [isLoading, setIsLoading] = useState(false);
+  const emit = useQueryEmit();
 
   const handleAddReply = useCallback(
     async (commentId: string, content: string) => {
@@ -37,6 +40,11 @@ function CommentList() {
         };
 
         await createCommentMutation.mutateAsync(commentData);
+
+        emit({
+          operation: "invalidateComment",
+          pageId: page?.id,
+        });
       } catch (error) {
         console.error("Failed to post comment:", error);
       } finally {
@@ -58,8 +66,8 @@ function CommentList() {
         data-comment-id={comment.id}
       >
         <div>
-          <CommentListItem comment={comment} />
-          <MemoizedChildComments comments={comments} parentId={comment.id} />
+          <CommentListItem comment={comment} pageId={page?.id} />
+          <MemoizedChildComments comments={comments} parentId={comment.id} pageId={page?.id} />
         </div>
 
         <Divider my={4} />
@@ -79,11 +87,11 @@ function CommentList() {
   }
 
   if (isError) {
-    return <div>Error loading comments.</div>;
+    return <div>{t("Error loading comments.")}</div>;
   }
 
   if (!comments || comments.items.length === 0) {
-    return <>No comments yet.</>;
+    return <>{t("No comments yet.")}</>;
   }
 
   return (
@@ -98,8 +106,9 @@ function CommentList() {
 interface ChildCommentsProps {
   comments: IPagination<IComment>;
   parentId: string;
+  pageId: string;
 }
-const ChildComments = ({ comments, parentId }: ChildCommentsProps) => {
+const ChildComments = ({ comments, parentId, pageId }: ChildCommentsProps) => {
   const getChildComments = useCallback(
     (parentId: string) =>
       comments.items.filter(
@@ -112,10 +121,11 @@ const ChildComments = ({ comments, parentId }: ChildCommentsProps) => {
     <div>
       {getChildComments(parentId).map((childComment) => (
         <div key={childComment.id}>
-          <CommentListItem comment={childComment} />
+          <CommentListItem comment={childComment} pageId={pageId} />
           <MemoizedChildComments
             comments={comments}
             parentId={childComment.id}
+            pageId={pageId}
           />
         </div>
       ))}
@@ -141,6 +151,7 @@ const CommentEditorWithActions = ({ commentId, onSave, isLoading }) => {
       <CommentEditor
         ref={commentEditorRef}
         onUpdate={setContent}
+        onSave={handleSave}
         editable={true}
       />
       {focused && <CommentActions onSave={handleSave} isLoading={isLoading} />}

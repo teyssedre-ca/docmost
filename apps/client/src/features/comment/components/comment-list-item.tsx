@@ -1,5 +1,5 @@
 import { Group, Text, Box } from "@mantine/core";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import classes from "./comment.module.css";
 import { useAtom, useAtomValue } from "jotai";
 import { timeAgo } from "@/lib/time";
@@ -15,21 +15,27 @@ import {
 import { IComment } from "@/features/comment/types/comment.types";
 import { CustomAvatar } from "@/components/ui/custom-avatar.tsx";
 import { currentUserAtom } from "@/features/user/atoms/current-user-atom.ts";
+import { useQueryEmit } from "@/features/websocket/use-query-emit";
 
 interface CommentListItemProps {
   comment: IComment;
+  pageId: string;
 }
 
-function CommentListItem({ comment }: CommentListItemProps) {
+function CommentListItem({ comment, pageId }: CommentListItemProps) {
   const { hovered, ref } = useHover();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
   const editor = useAtomValue(pageEditorAtom);
   const [content, setContent] = useState<string>(comment.content);
   const updateCommentMutation = useUpdateCommentMutation();
   const deleteCommentMutation = useDeleteCommentMutation(comment.pageId);
   const [currentUser] = useAtom(currentUserAtom);
+  const emit = useQueryEmit();
+
+  useEffect(() => {
+    setContent(comment.content)
+  }, [comment]);
 
   async function handleUpdateComment() {
     try {
@@ -40,6 +46,11 @@ function CommentListItem({ comment }: CommentListItemProps) {
       };
       await updateCommentMutation.mutateAsync(commentToUpdate);
       setIsEditing(false);
+
+      emit({
+        operation: "invalidateComment",
+        pageId: pageId,
+      });
     } catch (error) {
       console.error("Failed to update comment:", error);
     } finally {
@@ -51,13 +62,32 @@ function CommentListItem({ comment }: CommentListItemProps) {
     try {
       await deleteCommentMutation.mutateAsync(comment.id);
       editor?.commands.unsetComment(comment.id);
+
+      emit({
+        operation: "invalidateComment",
+        pageId: pageId,
+      });
     } catch (error) {
       console.error("Failed to delete comment:", error);
     }
   }
 
+  function handleCommentClick(comment: IComment) {
+    const el = document.querySelector(`.comment-mark[data-comment-id="${comment.id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("comment-highlight");
+      setTimeout(() => {
+        el.classList.remove("comment-highlight");
+      }, 3000);
+    }
+  }
+
   function handleEditToggle() {
     setIsEditing(true);
+  }
+  function cancelEdit() {
+    setIsEditing(false);
   }
 
   return (
@@ -97,7 +127,7 @@ function CommentListItem({ comment }: CommentListItemProps) {
 
       <div>
         {!comment.parentCommentId && comment?.selection && (
-          <Box className={classes.textSelection}>
+          <Box className={classes.textSelection} onClick={() => handleCommentClick(comment)}>
             <Text size="sm">{comment?.selection}</Text>
           </Box>
         )}
@@ -110,12 +140,15 @@ function CommentListItem({ comment }: CommentListItemProps) {
               defaultContent={content}
               editable={true}
               onUpdate={(newContent: any) => setContent(newContent)}
+              onSave={handleUpdateComment}
               autofocus={true}
             />
 
             <CommentActions
               onSave={handleUpdateComment}
               isLoading={isLoading}
+              onCancel={cancelEdit}
+              isCommentEditor={true}
             />
           </>
         )}
